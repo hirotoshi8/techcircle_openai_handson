@@ -13,16 +13,20 @@ class Trainer():
         self.epsilon_decay = epsilon_decay
         self.max_step = max_step
 
+
     def train(self, env, episode_count, render=False):
+
         default_epsilon = self.agent.epsilon
         self.agent.epsilon = self.epsilon
         values = []
         steps = deque(maxlen=100)
         lr = self.learning_rate
+
         for i in range(episode_count):
             obs = env.reset()
             step = 0
             done = False
+
             while not done:
                 if render:
                     env.render()
@@ -32,6 +36,10 @@ class Trainer():
 
                 state = self.agent.q.observation_to_state(obs)
                 # your code here 1
+                # 遷移先で見込める最大の報酬
+                future = 0 if done else np.max(self.agent.q.values(next_obs))
+                value = self.agent.q.table[state][action]
+                self.agent.q.table[state][action] += lr * (reward + self.gamma*future - value)
 
                 obs = next_obs
                 values.append(value)
@@ -47,3 +55,8 @@ class Trainer():
                     )
                 
                 # your code here 2
+                # エピソードが進むにつれて、学習率を下げていく（探索の割合を減らす）
+                if self.epsilon_decay is not None:
+                    self.agent.epsilon = self.epsilon_decay(self.epsilon_decay, i)
+                if self.learning_rate_decay is not None:
+                    lr = self.learning_rate_decay(lr, i)
